@@ -13,7 +13,7 @@
 
 ```
 var opts = {
-      slideIn: 'slide-in-',	//显示动画类名
+    slideIn: 'slide-in-',	//显示动画类名
   	slideOut: 'slide-out-',	//隐藏动画类名
   	active: 'active',		//激活各个面板和tab按钮状态的类名，（共用同一个类名）
 
@@ -52,5 +52,5 @@ var opts = {
 				console.log($(dom).data('level'));
 			}
 		});
-	</script>
+</script>
 ```
