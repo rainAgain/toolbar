@@ -34,6 +34,7 @@
 			CHANGEDELAY: 200, //三角区域停留时间触发切换
 			leftBar: '#left-bar',
 			leftBarFirst: 'left-bar-first',	//侧边栏第一个面板类名
+            leftBarContent: 'left-bar-content', //侧边栏面板中的ul类名
 			barItem: 'bar-item',	//侧边栏所有面板的公共类名
 			item: 'common-item',	//侧边栏单个面板中tab按钮的类名
 
@@ -78,8 +79,13 @@
 
 	    var enterTimer = null;
 	    _this.$leftBar.on('mouseenter', '.' + _this.config.item, function(e) {
+            
             var $item = $(this);
 
+             if(enterTimer) {
+                clearTimeout(enterTimer);
+            }
+            
             if (_this.config.isOut) {
             	_this.activateItem($item);
                 
@@ -87,15 +93,13 @@
             	//在三角形中停留显示
                 _this.calcItemLoc($item);
 
-                clearTimeout(enterTimer);
-
                 enterTimer = setTimeout(function() {
                     var currentLoc = _this.config.mouseLocs[_this.config.mouseLocs.length - 1];
 
                     if (_this.adjustInItem(currentLoc)) {
                         _this.config.isOut = true;
                         _this.activateItem($item);
-                    };
+                    }
                 }, _this.config.CHANGEDELAY);
             }
         }).on('mouseleave', '.' + _this.config.item, function(e) {
@@ -133,9 +137,9 @@
                 }*/
 
                 if ($next.length) {
-                    var nextLeftLoc = _this.calcNextLeftLoc($next), //下一面板的左上角和左下角坐标
-                        leaveLoc = { x: e.pageX, y: e.pageY }, //移出item时候的坐标
-                        isInDelta = _this.adjustIsInDelta(leaveLoc, nextLeftLoc); //是否在三角形中                
+                    var nextLeftLoc = _this.calcNextLeftLoc($next); //下一面板的左上角和左下角坐标
+                        // leaveLoc = { x: e.pageX, y: e.pageY }, //移出item时候的坐标
+                        isInDelta = _this.adjustIsInDelta(nextLeftLoc); //是否在三角形中                
 
                     if (isInDelta) {
                         //console.log('在三角形中');
@@ -148,21 +152,18 @@
                 } else {
                     _this.config.isOut = true;
                 }
-                
-
-
             }
         }).on('mouseleave', function() {
             //离开left-bar
             var $this = $(this),
                 $barItem = $('.' + _this.config.barItem + '.'+_this.config.active, $this);
         	_this.deActiveDi($barItem);
+
             _this.config.isLeftBarOut = false;
             _this.config.mouseLocs = [];
         });
 
 	}
-
 
 	//激活包含ul的面板
 	var activeTimer = null;
@@ -182,12 +183,16 @@
 				setTimeout(function() {
 					$selector.removeClass( _this.config.slideIn + level );
 				}, _this.config.DELAY);
+
 				if(activeTimer) {
 					clearTimeout(activeTimer);
 				}
 			}
 		} else {
-			//如果动画没有结束
+            if(activeTimer) {
+                clearTimeout(activeTimer);
+            }
+			//如果上一次动画没有结束再次激活
         	activeTimer = setTimeout(function(){
         		_this.activate($selector, level);
         	} ,10);
@@ -250,7 +255,7 @@
     };
 
     //判断是否在三角形中方法一
-    ToolBar.prototype.adjustIsInDelta = function(leaveLoc, nextLeftLoc) {
+    ToolBar.prototype.adjustIsInDelta = function(nextLeftLoc) {
         var start = _this.config.mouseLocs[0] || { x: 0, y: 0 },
             end = _this.config.mouseLocs[_this.config.mouseLocs.length - 1] || { x: 0, y: 0 },
             preRatio, lastRatio, ret;
@@ -280,6 +285,75 @@
         return ret;
     };
 
+    /*//判断是否在三角形中方法二(记录移出li的位置坐标)
+    var adjustIsInDelta2 = function(leaveLoc, nextLeftLoc) {
+  
+        var start = mouseLocs[0] || { x: 0, y: 0 },
+            end = mouseLocs[mouseLocs.length - 1] || { x: 0, y: 0 },
+            ret;
+            
+
+        if (end.x > start.x) {
+            //第一第四象限
+
+
+            var mouseRatio = Math.abs(end.y - start.y) / Math.abs(end.x - start.x);
+
+            console.log('mouseRatio:' + mouseRatio);
+
+            if (end.y > start.y) {
+                //向下
+                var maxBelowRatio = slope(nextLeftLoc.lowerLeft,leaveLoc);
+
+                if (mouseRatio < maxBelowRatio) {
+                    ret = true;
+                } else {
+                    ret = false;
+                }
+
+            } else {
+                //向上
+                var maxUpRatio = slope(nextLeftLoc.upperLeft,leaveLoc);
+
+                if (mouseRatio < maxUpRatio) {
+                    ret = true;
+                } else {
+                    ret = false;
+                }
+            }
+
+        } else {
+            //第二第三象限
+            ret = false;
+        }
+        return ret;
+    };
+
+    //判断是否在三角形中方法三（固定角度）
+    var adjustIsInDelta3 = function(leaveLoc, nextLeftLoc) {
+  
+        var start = mouseLocs[0] || { x: 0, y: 0 },
+            end = mouseLocs[mouseLocs.length - 1] || { x: 0, y: 0 },
+            maxRatio = 1.73205, //约定60度角的斜率 为根号三
+            ret;
+
+        if (end.x > start.x) {
+            //第一第四象限
+            var mouseRatio = slope(end,start);
+
+            if (mouseRatio < maxRatio) {
+                ret = true;
+            } else {
+                ret = false;
+            }
+        } else {
+            //第二第三象限
+            ret = false;
+        }
+        return ret;
+    };*/
+
+
     //计算下一面板的左侧坐标
     ToolBar.prototype.calcNextLeftLoc = function($next) {
         var _nextLoc = {
@@ -296,7 +370,7 @@
         return _nextLoc;
     };
 
-    //计算所在选项的角坐标
+    //计算所在item选项的角坐标
     ToolBar.prototype.calcItemLoc = function($item) {
         var _liWidth = $item.outerWidth(),
             _liHeight = $item.outerHeight();
@@ -323,7 +397,7 @@
         };
     };
 
-    //判断是否在单个tab中
+    //判断是否在单个item中
     ToolBar.prototype.adjustInItem = function(lastLoc) {
     	lastLoc = lastLoc || {x:0,y:0};
         var x = lastLoc.x,
@@ -353,6 +427,7 @@
                 level = parseInt($parentRoom.data( _this.config.level )) + 1, //取得下一层级是第几个
                 $next = $parentRoom.next(), //当前鼠标所在的下一面板
                 $nextAll = $next.nextAll(),
+                $leftBarContentAll = $('.' + _this.config.leftBarContent, $next),
                 $leftBarContents = $('.' + ref, $next), //当前选项对应的下一面板中的ul块
                 active = _this.config.active,
                 item = _this.config.item;
@@ -374,8 +449,10 @@
 
                 $paramDom = isHasNext ? $parentRoom.nextAll() : $next;
 
+                $leftBarContentAll.removeClass(active);
+
                 _this.deActiveDi($paramDom, function() {
-                	$leftBarContents.removeClass(active).find('.'+ item).remove(active);
+                	$leftBarContents.removeClass(active).find('.'+ item).removeClass(active);
                 });
             }
             $item.addClass(active).siblings().removeClass(active);
@@ -383,7 +460,5 @@
     };
 
 	$.ToolBar = ToolBar;
-
-
 
 })(jQuery);
